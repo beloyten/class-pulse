@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand */
+  --color-primary: #6C63FF;
+  --color-primary-light: #A29BFE;
+  --color-primary-dark: #4A42D4;
+
+  /* Mood (neutral, không phán xét) */
+  --color-mood-happy: #FFD93D;
+  --color-mood-neutral: #74B9FF;
+  --color-mood-sad: #A29BFE;
+
+  /* Status (chỉ GV thấy) */
+  --color-status-green: #00B894;
+  --color-status-yellow: #FDCB6E;
+  --color-status-red: #E17055;
+
+  /* Background & Neutral */
+  --color-bg-primary: #FAFBFF;
+  --color-bg-secondary: #F0F3FF;
+  --color-bg-card: #FFFFFF;
+  --color-text-primary: #2D3436;
+  --color-text-secondary: #636E72;
+  --color-text-muted: #B2BEC3;
+  --color-border: #E8ECF4;
+
+  /* Typography */
+  --font-display: 'Nunito', sans-serif;
+  --font-body: 'Inter', sans-serif;
+
+  /* Radius */
+  --radius-card: 16px;
+  --radius-button: 12px;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-body);
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    min-height: 100dvh;
+  }
+
+  /* Prevent zoom on input focus (iOS) */
+  input, select, textarea {
+    font-size: 16px;
+  }
+}
+
+@layer utilities {
+  .tap-highlight-none {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@keyframes bounce-idle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes wave {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(10deg); }
+  75% { transform: rotate(-10deg); }
+}
