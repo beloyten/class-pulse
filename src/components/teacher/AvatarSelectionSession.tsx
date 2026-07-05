@@ -7,7 +7,6 @@ import Button from '@/components/ui/Button'
 import type { Student, Avatar } from '@/types'
 
 interface Props {
-  classId: string
   students: Student[]
   avatars: Avatar[]
   onComplete: () => void
@@ -20,7 +19,6 @@ type SelectionStep =
   | { phase: 'confirm'; student: Student; avatar: Avatar }
 
 export default function AvatarSelectionSession({
-  classId,
   students,
   avatars,
   onComplete,

@@ -200,7 +200,6 @@ export default async function ClassDetailPage({ params, searchParams }: Props) {
         <ClassDetailClient
           cls={cls}
           students={result}
-          today={today}
           setupAvatars={setupAvatars}
           baseStudents={baseStudents}
         />

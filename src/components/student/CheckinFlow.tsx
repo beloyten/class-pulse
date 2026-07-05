@@ -27,9 +27,6 @@ export default function CheckinFlow({
   const stepRef = useRef(step)
   const submittingRef = useRef(false)
   const [doneIds, setDoneIds] = useState<Set<string>>(new Set(initialDoneIds))
-  // Mood saved to DB immediately on tap; also stored here for undo
-  const [pendingMood, setPendingMood] = useState<MoodValue | null>(null)
-  const [pendingStreak, setPendingStreak] = useState(0)
 
   async function saveMood(studentId: string, mood: MoodValue): Promise<{ streakCount: number; isNewStreak: boolean }> {
     const res = await fetch('/api/checkin', {
@@ -62,10 +59,8 @@ export default function CheckinFlow({
     if (submittingRef.current) return
     submittingRef.current = true
     const { student } = step
-    setPendingMood(mood)
 
     const { streakCount } = await saveMood(student.id, mood)
-    setPendingStreak(streakCount)
 
     setStep({ step: 'celebration', student, mood, newStreak: streakCount })
   }
@@ -84,8 +79,6 @@ export default function CheckinFlow({
     if (s.step !== 'celebration') return
     submittingRef.current = false  // Reset for next student
     setDoneIds(prev => new Set(Array.from(prev).concat(s.student.id)))
-    setPendingMood(null)
-    setPendingStreak(0)
     setStep({ step: 'grid' })
   }, [])
 

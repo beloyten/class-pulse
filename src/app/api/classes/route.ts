@@ -9,8 +9,6 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const today = new Date().toISOString().split('T')[0]
-
   const { data: classes } = await supabase
     .from('classes')
     .select('id, name, code, school_name, grade, is_active, created_at')

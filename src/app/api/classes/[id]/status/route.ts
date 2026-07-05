@@ -74,6 +74,7 @@ export async function GET(
   }
 
   // Build per-student result
+  const overallSeverityByStudent = new Map<string, number>()
   const result: StudentWithHistory[] = students.map(student => {
     const studentMoods = (moodLogs ?? [])
       .filter(l => l.student_id === student.id)
@@ -106,7 +107,8 @@ export async function GET(
       streakCount: student.streak_count,
     }
 
-    const { flags: ruleFlags, overall_status } = runRules(ruleInput)
+    const { flags: ruleFlags, overall_status, overall_severity } = runRules(ruleInput)
+    overallSeverityByStudent.set(student.id, overall_severity)
 
     const activeFlag = (flags ?? []).find(f => f.student_id === student.id)
     const todayMoodEntry = studentMoods.find(l => l.date === today)
@@ -148,7 +150,7 @@ export async function GET(
   })
 
   // Persist updated flags (upsert) — async, không block response
-  persistFlags(id, result as StudentWithStatus[], supabase).catch(() => {})
+  persistFlags(id, result as StudentWithStatus[], overallSeverityByStudent, supabase).catch(() => {})
 
   const checkinCountToday = result.filter(s => s.today_mood !== null).length
 
@@ -165,6 +167,7 @@ export async function GET(
 async function persistFlags(
   classId: string,
   students: StudentWithStatus[],
+  overallSeverityByStudent: Map<string, number>,
   supabase: Awaited<ReturnType<typeof import('@/lib/supabase/server').createClient>>
 ) {
   const today = new Date().toISOString().split('T')[0]
@@ -191,8 +194,8 @@ async function persistFlags(
       .eq('is_active', true)
       .neq('triggered_at', today)
 
-    // Lưu severity đã escalate (khớp với overall_status) để dashboard đọc chính xác
-    const escalatedSeverity = student.overall_status === 'red' ? 3 : 2
+    // Lưu severity đã escalate (khớp với overall_status), giữ đúng severity 1 khi không escalate
+    const escalatedSeverity = overallSeverityByStudent.get(student.id) ?? 1
     const top = triggeredFlags.reduce((a, b) => a.severity >= b.severity ? a : b)
     await supabase
       .from('student_flags')

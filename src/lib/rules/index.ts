@@ -6,7 +6,9 @@ import { silentRisk } from './silent-risk'
 import { mixedSignal } from './mixed-signal'
 import { skipPattern } from './skip-pattern'
 
-export function runRules(input: RuleInput): Pick<StudentWithStatus, 'flags' | 'overall_status'> {
+export function runRules(
+  input: RuleInput
+): Pick<StudentWithStatus, 'flags' | 'overall_status'> & { overall_severity: number } {
   const results: RuleResult[] = [
     suddenChange(input),
     downwardTrend(input),
@@ -25,6 +27,7 @@ export function runRules(input: RuleInput): Pick<StudentWithStatus, 'flags' | 'o
       overallSeverity >= 3 ? 'red'
       : overallSeverity >= 1 ? 'yellow'
       : 'green',
+    overall_severity: overallSeverity,
   }
 }
 

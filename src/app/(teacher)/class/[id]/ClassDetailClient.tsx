@@ -26,22 +26,24 @@ interface ClassInfo {
 interface Props {
   cls: ClassInfo
   students: StudentWithHistory[]
-  today: string
   setupAvatars?: Avatar[]
   baseStudents?: Student[]
 }
 
-export default function ClassDetailClient({ cls, students, today, setupAvatars, baseStudents }: Props) {
+export default function ClassDetailClient({ cls, students, setupAvatars, baseStudents }: Props) {
   const [selected, setSelected] = useState<StudentWithHistory | null>(null)
   const [showSetup, setShowSetup] = useState(!!setupAvatars)
   const router = useRouter()
 
-  // Sync selected student with fresh data after router.refresh()
+  // Sync selected student with fresh data after router.refresh().
+  // Deps intentionally exclude `selected`: this should only re-run when `students`
+  // changes (i.e. after a refetch), not every time it sets its own state below.
   useEffect(() => {
     if (selected) {
       const updated = students.find(s => s.id === selected.id)
       if (updated) setSelected(updated)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [students])
 
   const sorted = [...students].sort(
@@ -89,7 +91,6 @@ export default function ClassDetailClient({ cls, students, today, setupAvatars, 
         </div>
 
         <AvatarSelectionSession
-          classId={cls.id}
           students={baseStudents}
           avatars={setupAvatars}
           onComplete={handleSetupComplete}
