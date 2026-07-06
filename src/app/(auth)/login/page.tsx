@@ -113,6 +113,13 @@ export default function LoginPage() {
               autoComplete="current-password"
               error={error}
             />
+            <Link
+              href="/forgot-password"
+              className="text-sm text-right -mt-2"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              Quên mật khẩu?
+            </Link>
             <Button type="submit" loading={loading} className="w-full mt-1">
               Đăng nhập
             </Button>
