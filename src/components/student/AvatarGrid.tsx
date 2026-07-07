@@ -11,6 +11,36 @@ interface Props {
 }
 
 export default function AvatarGrid({ students, doneIds, className, onSelect }: Props) {
+  const allDone = students.length > 0 && doneIds.size === students.length
+
+  if (allDone) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="flex flex-col items-center justify-center min-h-dvh text-center px-6 gap-4"
+        style={{ backgroundColor: 'var(--color-bg-primary)' }}
+      >
+        <motion.div
+          animate={{ scale: [1, 1.15, 1] }}
+          transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ fontSize: 64 }}
+        >
+          🎉
+        </motion.div>
+        <h1
+          className="text-2xl font-bold"
+          style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}
+        >
+          Cả lớp {className} đã điểm danh xong!
+        </h1>
+        <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+          Hẹn gặp lại các bạn vào ngày mai nhé ✨
+        </p>
+      </motion.div>
+    )
+  }
+
   return (
     <div className="flex flex-col min-h-dvh" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
       {/* Header */}

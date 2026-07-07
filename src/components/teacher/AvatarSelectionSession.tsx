@@ -265,7 +265,7 @@ export default function AvatarSelectionSession({
               loading={saving}
               className="flex-1"
             >
-              Ừ đúng rồi! 🎉
+              Đúng rồi! 🎉
             </Button>
           </div>
         </motion.div>
