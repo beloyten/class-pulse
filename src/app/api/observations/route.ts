@@ -17,7 +17,10 @@ export async function POST(request: Request) {
 
   const { data, error } = await supabase
     .from('teacher_signals')
-    .insert({ student_id, teacher_id: user.id, signal, note: note ?? null })
+    .upsert(
+      { student_id, teacher_id: user.id, signal, note: note ?? null },
+      { onConflict: 'student_id,teacher_id,signal_date' }
+    )
     .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

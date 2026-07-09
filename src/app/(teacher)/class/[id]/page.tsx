@@ -80,7 +80,7 @@ export default async function ClassDetailPage({ params, searchParams }: Props) {
       .order('checked_at', { ascending: false }),
     supabase
       .from('teacher_signals')
-      .select('student_id, signal, created_at')
+      .select('student_id, signal, note, created_at')
       .in('student_id', studentIds)
       .gte('created_at', since7)
       .order('created_at', { ascending: false }),
@@ -128,6 +128,9 @@ export default async function ClassDetailPage({ params, searchParams }: Props) {
     const { flags: ruleFlags, overall_status } = runRules(ruleInput)
     const activeFlag = (flags ?? []).find(f => f.student_id === student.id)
     const todayMoodEntry = studentMoods.find(l => l.date.split('T')[0] === today)
+    const todaySignalEntry = (signals ?? []).find(
+      s => s.student_id === student.id && s.created_at.split('T')[0] === today
+    )
 
     const moodByDate = new Map(studentMoods.map(l => [l.date.split('T')[0], l.mood]))
     const mood_history = last7Dates.map(date => ({ date, mood: moodByDate.get(date) ?? null }))
@@ -144,6 +147,8 @@ export default async function ClassDetailPage({ params, searchParams }: Props) {
       created_at: '',
       avatar: student.avatar as unknown as StudentWithHistory['avatar'],
       today_mood: todayMoodEntry?.mood ?? null,
+      today_signal: (todaySignalEntry?.signal as SignalValue) ?? null,
+      today_signal_note: todaySignalEntry?.note ?? null,
       flag_severity: (activeFlag?.severity as StudentWithHistory['flag_severity']) ?? null,
       flag_reason: activeFlag?.reason ?? null,
       flags: ruleFlags,

@@ -172,12 +172,22 @@ export default function ClassDetailClient({ cls, students, setupAvatars, baseStu
               </div>
 
               <div className="flex-1 min-w-0">
-                <p
-                  className="font-semibold text-sm truncate"
-                  style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)' }}
-                >
-                  {student.full_name}
-                </p>
+                <div className="flex items-center gap-1.5">
+                  <p
+                    className="font-semibold text-sm truncate"
+                    style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)' }}
+                  >
+                    {student.full_name}
+                  </p>
+                  {student.today_signal !== null && (
+                    <span
+                      className="flex-shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                      style={{ backgroundColor: 'var(--color-status-green)22', color: 'var(--color-status-green)' }}
+                    >
+                      ✓ Đã ghi nhận
+                    </span>
+                  )}
+                </div>
                 {topFlag ? (
                   <p className="text-xs truncate" style={{ color: cfg.color }}>
                     {cfg.emoji} {topFlag.reason}

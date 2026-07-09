@@ -27,8 +27,8 @@ interface Props {
 }
 
 export default function StudentDetail({ student, moodHistory, onClose, onObservationSave }: Props) {
-  const [selectedSignal, setSelectedSignal] = useState<SignalValue | null>(null)
-  const [note, setNote] = useState('')
+  const [selectedSignal, setSelectedSignal] = useState<SignalValue | null>(student.today_signal)
+  const [note, setNote] = useState(student.today_signal_note ?? '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -144,9 +144,16 @@ export default function StudentDetail({ student, moodHistory, onClose, onObserva
 
             {/* Teacher observation */}
             <div className="flex flex-col gap-3">
-              <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                👁️ Quan sát của bạn hôm nay:
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                  👁️ Quan sát của bạn hôm nay:
+                </p>
+                {student.today_signal !== null && (
+                  <span className="text-xs font-medium" style={{ color: 'var(--color-status-green)' }}>
+                    ✓ Đã ghi nhận
+                  </span>
+                )}
+              </div>
               <div className="flex gap-2">
                 {SIGNAL_OPTIONS.map(opt => (
                   <button
@@ -185,7 +192,7 @@ export default function StudentDetail({ student, moodHistory, onClose, onObserva
                 size="sm"
                 className="self-end"
               >
-                {saved ? '✓ Đã lưu' : 'Lưu'}
+                {saved ? '✓ Đã lưu' : student.today_signal !== null ? 'Cập nhật' : 'Lưu'}
               </Button>
             </div>
 

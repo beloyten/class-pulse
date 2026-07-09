@@ -53,7 +53,7 @@ export async function GET(
   const [{ data: signals }, { data: flags }] = await Promise.all([
     supabase
       .from('teacher_signals')
-      .select('student_id, signal, created_at')
+      .select('student_id, signal, note, created_at')
       .in('student_id', studentIds)
       .gte('created_at', since7)
       .order('created_at', { ascending: false }),
@@ -112,6 +112,9 @@ export async function GET(
 
     const activeFlag = (flags ?? []).find(f => f.student_id === student.id)
     const todayMoodEntry = studentMoods.find(l => l.date === today)
+    const todaySignalEntry = (signals ?? []).find(
+      s => s.student_id === student.id && s.created_at.split('T')[0] === today
+    )
 
     const moodByDate = new Map(studentMoods.map(l => [l.date.split('T')[0], l.mood]))
     const mood_history = last7Dates.map(date => ({
@@ -131,6 +134,8 @@ export async function GET(
       created_at: '',
       avatar: student.avatar as unknown as StudentWithStatus['avatar'],
       today_mood: todayMoodEntry?.mood ?? null,
+      today_signal: (todaySignalEntry?.signal as SignalValue) ?? null,
+      today_signal_note: todaySignalEntry?.note ?? null,
       flag_severity: (activeFlag?.severity as StudentWithStatus['flag_severity']) ?? null,
       flag_reason: activeFlag?.reason ?? null,
       flags: ruleFlags,

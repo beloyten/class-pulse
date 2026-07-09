@@ -125,6 +125,8 @@ export interface RuleResult {
 export interface StudentWithStatus extends Student {
   avatar: Avatar | null
   today_mood: MoodValue | null
+  today_signal: SignalValue | null
+  today_signal_note: string | null
   flag_severity: SeverityValue | null
   flag_reason: string | null
   flags: RuleResult[]
