@@ -4,8 +4,12 @@ import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import { X, Settings, Plus } from 'lucide-react'
 import StudentDetail from '@/components/teacher/StudentDetail'
 import AvatarSelectionSession from '@/components/teacher/AvatarSelectionSession'
+import { createClient } from '@/lib/supabase/client'
+import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
 import type { StudentWithHistory, SignalValue, Avatar, Student } from '@/types'
 
 const STATUS_ORDER = { red: 0, yellow: 1, green: 2 } as const
@@ -21,6 +25,7 @@ interface ClassInfo {
   name: string
   code: string
   school_name: string | null
+  grade: number | null
 }
 
 interface Props {
@@ -33,7 +38,35 @@ interface Props {
 export default function ClassDetailClient({ cls, students, setupAvatars, baseStudents }: Props) {
   const [selected, setSelected] = useState<StudentWithHistory | null>(null)
   const [showSetup, setShowSetup] = useState(!!setupAvatars)
+  const [changingAvatarId, setChangingAvatarId] = useState<string | null>(null)
+  const [avatarList, setAvatarList] = useState<Avatar[]>([])
   const router = useRouter()
+
+  // Class settings modal
+  const [showClassSettings, setShowClassSettings] = useState(false)
+  const [className, setClassName] = useState(cls.name)
+  const [classSchool, setClassSchool] = useState(cls.school_name ?? '')
+  const [classGrade, setClassGrade] = useState(cls.grade?.toString() ?? '')
+  const [savingClass, setSavingClass] = useState(false)
+  const [classError, setClassError] = useState('')
+  const [confirmingDeleteClass, setConfirmingDeleteClass] = useState(false)
+  const [deleteClassText, setDeleteClassText] = useState('')
+  const [deletingClass, setDeletingClass] = useState(false)
+  const [deleteClassError, setDeleteClassError] = useState('')
+
+  // Add student modal
+  const [showAddStudent, setShowAddStudent] = useState(false)
+  const [newStudentName, setNewStudentName] = useState('')
+  const [newStudentEmail, setNewStudentEmail] = useState('')
+  const [addingStudent, setAddingStudent] = useState(false)
+  const [addStudentError, setAddStudentError] = useState('')
+
+  // Nạp sẵn danh sách linh vật để dùng khi GV bấm "Đổi linh vật" cho 1 bé
+  useEffect(() => {
+    createClient().from('avatars').select('*').order('id').then(({ data }) => {
+      if (data) setAvatarList(data as Avatar[])
+    })
+  }, [])
 
   // Sync selected student with fresh data after router.refresh().
   // Deps intentionally exclude `selected`: this should only re-run when `students`
@@ -64,6 +97,88 @@ export default function ClassDetailClient({ cls, students, setupAvatars, baseStu
     },
     [router]
   )
+
+  function handleChangeAvatarComplete() {
+    setChangingAvatarId(null)
+    router.refresh()
+  }
+
+  async function handleSaveClass() {
+    if (!className.trim()) return
+    if (classGrade && (Number(classGrade) < 1 || Number(classGrade) > 12)) {
+      setClassError('Khối phải từ 1 đến 12')
+      return
+    }
+    setClassError('')
+    setSavingClass(true)
+    const res = await fetch(`/api/classes/${cls.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: className,
+        school_name: classSchool || undefined,
+        grade: classGrade ? Number(classGrade) : undefined,
+      }),
+    })
+    setSavingClass(false)
+    if (res.ok) {
+      setShowClassSettings(false)
+      router.refresh()
+    } else {
+      setClassError('Không lưu được. Thử lại nhé.')
+    }
+  }
+
+  async function handleDeleteClass() {
+    setDeletingClass(true)
+    setDeleteClassError('')
+    const res = await fetch(`/api/classes/${cls.id}`, { method: 'DELETE' })
+    if (res.ok) {
+      router.push('/dashboard')
+    } else {
+      setDeletingClass(false)
+      setDeleteClassError('Không xóa được. Thử lại nhé.')
+    }
+  }
+
+  async function handleAddStudent() {
+    if (!newStudentName.trim()) return
+    setAddStudentError('')
+    setAddingStudent(true)
+    const res = await fetch(`/api/classes/${cls.id}/students`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ full_name: newStudentName, parent_email: newStudentEmail || undefined }),
+    })
+    setAddingStudent(false)
+    if (res.ok) {
+      setShowAddStudent(false)
+      setNewStudentName('')
+      setNewStudentEmail('')
+      router.refresh()
+    } else {
+      setAddStudentError('Không thêm được. Thử lại nhé.')
+    }
+  }
+
+  const handleEditStudent = useCallback(async (studentId: string, fullName: string, parentEmail: string) => {
+    const res = await fetch(`/api/students/${studentId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ full_name: fullName, parent_email: parentEmail || undefined }),
+    })
+    if (res.ok) router.refresh()
+    return res.ok
+  }, [router])
+
+  const handleDeleteStudent = useCallback(async (studentId: string) => {
+    const res = await fetch(`/api/students/${studentId}`, { method: 'DELETE' })
+    if (res.ok) {
+      setSelected(null)
+      router.refresh()
+    }
+    return res.ok
+  }, [router])
 
   function handleSetupComplete() {
     setShowSetup(false)
@@ -109,6 +224,23 @@ export default function ClassDetailClient({ cls, students, setupAvatars, baseStu
 
   return (
     <>
+      {/* Class actions */}
+      <div className="flex items-center justify-end gap-4 mb-3">
+        <button
+          onClick={() => {
+            setClassName(cls.name)
+            setClassSchool(cls.school_name ?? '')
+            setClassGrade(cls.grade?.toString() ?? '')
+            setClassError('')
+            setShowClassSettings(true)
+          }}
+          className="flex items-center gap-1 text-xs font-medium"
+          style={{ color: 'var(--color-text-secondary)' }}
+        >
+          <Settings size={14} /> Quản lý lớp
+        </button>
+      </div>
+
       {/* Checkin progress */}
       <div
         className="rounded-2xl p-4 mb-4 flex items-center justify-between gap-3"
@@ -146,6 +278,18 @@ export default function ClassDetailClient({ cls, students, setupAvatars, baseStu
       </div>
 
       {/* Student list */}
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+          Danh sách học sinh
+        </p>
+        <button
+          onClick={() => { setAddStudentError(''); setNewStudentName(''); setNewStudentEmail(''); setShowAddStudent(true) }}
+          className="flex items-center gap-1 text-xs font-semibold"
+          style={{ color: 'var(--color-primary)' }}
+        >
+          <Plus size={14} /> Thêm học sinh
+        </button>
+      </div>
       <div className="flex flex-col gap-2">
         {sorted.map((student, i) => {
           const cfg = STATUS_LABEL[student.overall_status]
@@ -218,10 +362,201 @@ export default function ClassDetailClient({ cls, students, setupAvatars, baseStu
           moodHistory={selected.mood_history}
           onClose={() => setSelected(null)}
           onObservationSave={handleObservationSave}
+          onChangeAvatar={() => {
+            setChangingAvatarId(selected.id)
+            setSelected(null)
+          }}
+          onEditStudent={handleEditStudent}
+          onDeleteStudent={handleDeleteStudent}
         />
+      )}
+
+      {changingAvatarId && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div
+            className="fixed inset-0"
+            style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+            onClick={() => setChangingAvatarId(null)}
+          />
+          <div
+            className="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5 max-h-[92dvh] overflow-y-auto"
+            style={{ backgroundColor: 'var(--color-bg-card)' }}
+          >
+            <button
+              onClick={() => setChangingAvatarId(null)}
+              className="absolute right-4 top-4 z-10"
+              style={{ color: 'var(--color-text-muted)' }}
+            >
+              <X size={20} />
+            </button>
+            {avatarList.length > 0 ? (
+              <AvatarSelectionSession
+                students={students.map(toBaseStudent)}
+                avatars={avatarList}
+                singleStudentId={changingAvatarId}
+                onComplete={handleChangeAvatarComplete}
+              />
+            ) : (
+              <p className="text-center py-8 text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                Đang tải...
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Class settings modal */}
+      {showClassSettings && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div
+            className="fixed inset-0"
+            style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+            onClick={() => { setShowClassSettings(false); setConfirmingDeleteClass(false) }}
+          />
+          <div
+            className="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5 max-h-[92dvh] overflow-y-auto flex flex-col gap-4"
+            style={{ backgroundColor: 'var(--color-bg-card)' }}
+          >
+            <div className="flex items-center justify-between">
+              <p className="font-bold text-lg" style={{ fontFamily: 'var(--font-display)' }}>
+                Quản lý lớp
+              </p>
+              <button
+                onClick={() => { setShowClassSettings(false); setConfirmingDeleteClass(false) }}
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <Input label="Tên lớp" value={className} onChange={e => setClassName(e.target.value)} required />
+            <Input label="Trường (không bắt buộc)" value={classSchool} onChange={e => setClassSchool(e.target.value)} />
+            <Input
+              label="Khối (không bắt buộc)"
+              type="number"
+              min={1}
+              max={12}
+              value={classGrade}
+              onChange={e => setClassGrade(e.target.value)}
+              error={classError}
+            />
+            <Button loading={savingClass} onClick={handleSaveClass} className="w-full">
+              Lưu thay đổi
+            </Button>
+
+            <div className="pt-2 border-t" style={{ borderColor: 'var(--color-border)' }}>
+              {confirmingDeleteClass ? (
+                <div className="flex flex-col gap-2 pt-3">
+                  <p className="text-xs" style={{ color: 'var(--color-status-red)' }}>
+                    Xóa lớp <strong>{cls.name}</strong> sẽ xóa toàn bộ học sinh, lịch sử điểm danh cảm xúc, quan sát và báo cáo liên quan — không thể hoàn tác.
+                    Gõ đúng tên lớp để xác nhận:
+                  </p>
+                  <Input
+                    value={deleteClassText}
+                    onChange={e => setDeleteClassText(e.target.value)}
+                    placeholder={cls.name}
+                  />
+                  {deleteClassError && (
+                    <p className="text-xs font-medium" style={{ color: 'var(--color-status-red)' }}>{deleteClassError}</p>
+                  )}
+                  <div className="flex gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => { setConfirmingDeleteClass(false); setDeleteClassText('') }}
+                      className="flex-1"
+                    >
+                      Hủy
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={deleteClassText !== cls.name}
+                      loading={deletingClass}
+                      onClick={handleDeleteClass}
+                      className="flex-1"
+                      style={{ backgroundColor: 'var(--color-status-red)' }}
+                    >
+                      Xóa lớp vĩnh viễn
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmingDeleteClass(true)}
+                  className="text-xs font-medium pt-3"
+                  style={{ color: 'var(--color-status-red)' }}
+                >
+                  🗑 Xóa lớp
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add student modal */}
+      {showAddStudent && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div
+            className="fixed inset-0"
+            style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+            onClick={() => setShowAddStudent(false)}
+          />
+          <div
+            className="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5 max-h-[92dvh] overflow-y-auto flex flex-col gap-4"
+            style={{ backgroundColor: 'var(--color-bg-card)' }}
+          >
+            <div className="flex items-center justify-between">
+              <p className="font-bold text-lg" style={{ fontFamily: 'var(--font-display)' }}>
+                Thêm học sinh
+              </p>
+              <button onClick={() => setShowAddStudent(false)} style={{ color: 'var(--color-text-muted)' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <Input
+              label="Họ và tên"
+              value={newStudentName}
+              onChange={e => setNewStudentName(e.target.value)}
+              placeholder="Nguyễn Văn A"
+              required
+            />
+            <Input
+              label="Email phụ huynh (không bắt buộc)"
+              type="email"
+              value={newStudentEmail}
+              onChange={e => setNewStudentEmail(e.target.value)}
+              placeholder="phuhuynh@gmail.com"
+            />
+            <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+              Bé sẽ chưa có linh vật — vào chi tiết bé sau khi thêm để chọn linh vật cho bé.
+            </p>
+            {addStudentError && (
+              <p className="text-xs" style={{ color: 'var(--color-status-red)' }}>{addStudentError}</p>
+            )}
+            <Button loading={addingStudent} onClick={handleAddStudent} className="w-full">
+              Thêm học sinh
+            </Button>
+          </div>
+        </div>
       )}
     </>
   )
+}
+
+function toBaseStudent(s: StudentWithHistory): Student {
+  return {
+    id: s.id,
+    class_id: s.class_id,
+    full_name: s.full_name,
+    order_number: s.order_number,
+    avatar_id: s.avatar_id,
+    parent_email: s.parent_email,
+    streak_count: s.streak_count,
+    last_checkin_date: s.last_checkin_date,
+    created_at: s.created_at,
+  }
 }
 
 function getTodayMoodEmoji(mood: number | null): string {

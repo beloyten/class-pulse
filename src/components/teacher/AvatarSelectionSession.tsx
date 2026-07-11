@@ -157,9 +157,10 @@ export default function AvatarSelectionSession({
               {done.map(student => {
                 const avatar = avatars.find(a => a.id === assignments[student.id])
                 return (
-                  <div
+                  <button
                     key={student.id}
-                    className="flex flex-col items-center gap-1 p-2 rounded-xl opacity-50"
+                    onClick={() => handlePickStudent(student)}
+                    className="flex flex-col items-center gap-1 p-2 rounded-xl opacity-60 active:opacity-100 transition-opacity"
                   >
                     <div
                       className="w-10 h-10 rounded-full flex items-center justify-center text-xl"
@@ -170,10 +171,13 @@ export default function AvatarSelectionSession({
                     <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                       {student.full_name.split(' ').pop()}
                     </span>
-                  </div>
+                  </button>
                 )
               })}
             </div>
+            <p className="text-xs text-center -mt-1" style={{ color: 'var(--color-text-muted)' }}>
+              Chạm vào bé để đổi lại linh vật
+            </p>
           </div>
         )}
       </div>

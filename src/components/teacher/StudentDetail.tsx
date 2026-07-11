@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 import MoodHistory from './MoodHistory'
 import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
 import type { StudentWithStatus, MoodValue, SeverityValue, SignalValue } from '@/types'
 
 const ACTION_SUGGESTIONS: Record<SeverityValue, string> = {
@@ -24,16 +25,56 @@ interface Props {
   moodHistory: { date: string; mood: MoodValue | null }[]
   onClose: () => void
   onObservationSave: (studentId: string, signal: SignalValue, note: string) => Promise<void>
+  onChangeAvatar: () => void
+  onEditStudent: (studentId: string, fullName: string, parentEmail: string) => Promise<boolean>
+  onDeleteStudent: (studentId: string) => Promise<boolean>
 }
 
-export default function StudentDetail({ student, moodHistory, onClose, onObservationSave }: Props) {
+export default function StudentDetail({
+  student, moodHistory, onClose, onObservationSave, onChangeAvatar, onEditStudent, onDeleteStudent,
+}: Props) {
   const [selectedSignal, setSelectedSignal] = useState<SignalValue | null>(student.today_signal)
   const [note, setNote] = useState(student.today_signal_note ?? '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const [editing, setEditing] = useState(false)
+  const [editName, setEditName] = useState(student.full_name)
+  const [editEmail, setEditEmail] = useState(student.parent_email ?? '')
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [editError, setEditError] = useState('')
+
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+
   useEffect(() => () => { if (savedTimerRef.current) clearTimeout(savedTimerRef.current) }, [])
+
+  async function handleSaveEdit() {
+    if (!editName.trim()) return
+    setSavingEdit(true)
+    setEditError('')
+    const ok = await onEditStudent(student.id, editName.trim(), editEmail.trim())
+    setSavingEdit(false)
+    if (ok) {
+      setEditing(false)
+    } else {
+      setEditError('Không lưu được. Thử lại nhé.')
+    }
+  }
+
+  async function handleConfirmDelete() {
+    setDeleting(true)
+    setDeleteError('')
+    const ok = await onDeleteStudent(student.id)
+    // Nếu thành công, parent sẽ đóng sheet (setSelected(null)) — component này unmount.
+    // Nếu fail, phải tự reset state để GV thấy lỗi và thử lại.
+    if (!ok) {
+      setDeleting(false)
+      setDeleteError('Không xóa được. Thử lại nhé.')
+    }
+  }
 
   const activeFlags = student.flags.filter(f => f.triggered)
   const maxSeverity = activeFlags.length > 0
@@ -104,6 +145,55 @@ export default function StudentDetail({ student, moodHistory, onClose, onObserva
               <X size={20} />
             </button>
           </div>
+
+          {editing ? (
+            <div
+              className="flex flex-col gap-3 rounded-2xl p-4 mb-4"
+              style={{ backgroundColor: 'var(--color-bg-secondary)' }}
+            >
+              <Input
+                label="Họ và tên"
+                value={editName}
+                onChange={e => setEditName(e.target.value)}
+                required
+              />
+              <Input
+                label="Email phụ huynh (không bắt buộc)"
+                type="email"
+                value={editEmail}
+                onChange={e => setEditEmail(e.target.value)}
+                placeholder="phuhuynh@gmail.com"
+              />
+              {editError && (
+                <p className="text-xs" style={{ color: 'var(--color-status-red)' }}>{editError}</p>
+              )}
+              <div className="flex gap-2 justify-end">
+                <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
+                  Hủy
+                </Button>
+                <Button size="sm" loading={savingEdit} onClick={handleSaveEdit}>
+                  Lưu
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-4 -mt-2 mb-1">
+              <button
+                onClick={onChangeAvatar}
+                className="text-xs font-medium"
+                style={{ color: 'var(--color-primary)' }}
+              >
+                🔄 Đổi linh vật
+              </button>
+              <button
+                onClick={() => setEditing(true)}
+                className="text-xs font-medium"
+                style={{ color: 'var(--color-primary)' }}
+              >
+                ✏️ Sửa thông tin
+              </button>
+            </div>
+          )}
 
           <div className="flex flex-col gap-5">
             {/* Mood history */}
@@ -202,6 +292,42 @@ export default function StudentDetail({ student, moodHistory, onClose, onObserva
                 📧 Email PH: {student.parent_email}
               </p>
             )}
+
+            {/* Danger zone */}
+            <div className="pt-2 border-t" style={{ borderColor: 'var(--color-border)' }}>
+              {confirmingDelete ? (
+                <div className="flex flex-col gap-2 pt-3">
+                  <p className="text-xs" style={{ color: 'var(--color-status-red)' }}>
+                    Xóa {student.full_name}? Toàn bộ lịch sử điểm danh cảm xúc của bé sẽ mất, không thể hoàn tác.
+                  </p>
+                  {deleteError && (
+                    <p className="text-xs font-medium" style={{ color: 'var(--color-status-red)' }}>{deleteError}</p>
+                  )}
+                  <div className="flex gap-2">
+                    <Button variant="secondary" size="sm" onClick={() => setConfirmingDelete(false)} className="flex-1">
+                      Hủy
+                    </Button>
+                    <Button
+                      size="sm"
+                      loading={deleting}
+                      onClick={handleConfirmDelete}
+                      className="flex-1"
+                      style={{ backgroundColor: 'var(--color-status-red)' }}
+                    >
+                      Xóa vĩnh viễn
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmingDelete(true)}
+                  className="text-xs font-medium pt-3"
+                  style={{ color: 'var(--color-status-red)' }}
+                >
+                  🗑 Xóa học sinh
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </motion.div>
